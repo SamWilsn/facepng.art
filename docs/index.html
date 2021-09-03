@@ -61,6 +61,16 @@
             text-decoration: none;
             color: black;
         }
+
+        #minted > a:after {
+            content: "";
+            display: inline-block;
+            background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKAQMAAAC3/F3+AAAABlBMVEWXC1aqqqqKtjh4AAAAAXRSTlMAQObYZgAAAB5JREFUCNdjYGBgYG5gsGxgUGpgUGFgUAQjewYIAAAwyAKE5Ct83gAAAABJRU5ErkJggg==");
+            width: 10px;
+            height: 10px;
+            vertical-align: middle;
+            margin-left: 5px;
+        }
         </style>
     </head>
     <body>
@@ -697,6 +707,7 @@
                 let provider = null;
                 let contract = null;
                 let lastPrice = null;
+                let inFlight = false;
 
                 const minted = document.getElementById("minted");
                 const action = document.querySelector("#action > a");
@@ -706,12 +717,15 @@
                     const link = document.createElement("a");
                     const asset = contractAddress.toLowerCase();
                     link.href = `${openseaBase}${asset}/${tokenId}`;
+                    link.rel = "noopener noreferrer";
+                    link.target = "_blank";
                     link.innerText = tokenId;
                     minted.appendChild(link);
                 };
 
                 const onClickInner = async function onClick(evt) {
                     evt.preventDefault();
+                    if (inFlight) { return; }
 
                     if (provider === null) {
                         const providerOptions = {
@@ -789,9 +803,9 @@
                     } else {
                         let currentAddress = await provider.getAddress();
                         let currentPrice = await contract.price();
-                        let price = ethers.utils.formatEther(currentPrice);
 
                         if (!currentPrice.eq(lastPrice)) {
+                            let price = ethers.utils.formatEther(currentPrice);
                             const confirmed = confirm(
                                 `price has changed since last refresh, now ${price} eth`
                             );
@@ -805,11 +819,24 @@
 
                         action.innerText = "minting...";
                         action.removeAttribute("href");
+                        inFlight = true;
 
                         // TODO: Better gas.
-                        let response = await contract.mint(currentAddress, {
+                        let options = {
                             value: currentPrice
-                        });
+                        };
+
+                        let gasEstimate = await contract.estimateGas.mint(
+                            currentAddress,
+                            options
+                        );
+
+                        options.gasLimit = gasEstimate.add(8000);
+
+                        let response = await contract.mint(
+                            currentAddress,
+                            options
+                        );
 
                         // Handle repricing.
                         let receipt;
@@ -826,7 +853,12 @@
                             }
                         }
 
+                        inFlight = false;
+
                         if (receipt.status) {
+                            let currentPrice = await contract.price();
+                            let price = ethers.utils.formatEther(currentPrice);
+                            lastPrice = currentPrice;
                             action.innerText = `mint for ${price} eth`;
                             action.href = '#';
                         } else {
