@@ -47,6 +47,20 @@
             font-size: xx-large;
             margin: 2em 0;
         }
+
+        #minted > a {
+            display: block;
+            text-align: center;
+        }
+
+        #minted > a:first-child:before {
+            content: "minted";
+            display: inline-block;
+            width: 100%;
+            font-size: xx-large;
+            text-decoration: none;
+            color: black;
+        }
         </style>
     </head>
     <body>
@@ -129,6 +143,8 @@
                     please wait...
                 </a>
             </div>
+            <div id="minted">
+            </div>
             <h2>What?</h2>
             <p>
                 a collection of 146 procedurally generated character art
@@ -200,8 +216,9 @@
                 const etherscanId = "HYND2S92S8FDTGJYQFNCAZBHKFI2R2TSVH";
                 const alchemyId = "EM9440V_C6x0vNboHclwNinOfKiMqW8V";
                 const pocketId = "26f61f3140012b60ee8397f8d1b2c9b03e666580";
+                const openseaBase = "https://testnets.opensea.io/assets/";
 
-                const contractAddress = "0x6d76883782d87dd61e6d8dabb188f26c64d2bad1";
+                const contractAddress = "0x0e3884F492B235F022A455Ebad2079641136407e";
                 const contractAbi = [
                     {
                         "inputs": [
@@ -681,9 +698,19 @@
                 let contract = null;
                 let lastPrice = null;
 
+                const minted = document.getElementById("minted");
                 const action = document.querySelector("#action > a");
                 const reload = () => { location.reload(); };
-                const onClick = async function onClick(evt) {
+
+                const onMint = function(tokenId) {
+                    const link = document.createElement("a");
+                    const asset = contractAddress.toLowerCase();
+                    link.href = `${openseaBase}${asset}/${tokenId}`;
+                    link.innerText = tokenId;
+                    minted.appendChild(link);
+                };
+
+                const onClickInner = async function onClick(evt) {
                     evt.preventDefault();
 
                     if (provider === null) {
@@ -702,7 +729,17 @@
                             providerOptions
                         });
 
-                        const modalProvider = await web3Modal.connect();
+                        let modalProvider;
+                        try {
+                            modalProvider = await web3Modal.connect();
+                        } catch (e) {
+                            if (e === "Modal closed by user") {
+                                return;
+                            } else {
+                                throw e;
+                            }
+                        }
+
                         const web3Provider = new ethers.providers.Web3Provider(modalProvider);
                         provider = web3Provider.getSigner();
 
@@ -733,6 +770,10 @@
 
                         contract = roContract.connect(provider);
 
+                        let currentAddress = await provider.getAddress();
+                        let filter = contract.filters.Transfer(null, currentAddress);
+                        contract.on(filter, (from, to, tokenId) => onMint(tokenId));
+
                         modalProvider.on("accountsChanged", reload);
                         modalProvider.on("chainChanged", reload);
                         modalProvider.on("disconnect", reload);
@@ -748,11 +789,13 @@
                     } else {
                         let currentAddress = await provider.getAddress();
                         let currentPrice = await contract.price();
+                        let price = ethers.utils.formatEther(currentPrice);
+
                         if (!currentPrice.eq(lastPrice)) {
-                            let price = ethers.utils.formatEther(currentPrice);
                             const confirmed = confirm(
                                 `price has changed since last refresh, now ${price} eth`
                             );
+                            lastPrice = currentPrice;
 
                             if (!confirmed) {
                                 reload();
@@ -760,12 +803,51 @@
                             }
                         }
 
+                        action.innerText = "minting...";
+                        action.removeAttribute("href");
+
                         // TODO: Better gas.
-                        await contract.mint(currentAddress, {
+                        let response = await contract.mint(currentAddress, {
                             value: currentPrice
                         });
+
+                        // Handle repricing.
+                        let receipt;
+                        while (true) {
+                            try {
+                                receipt = await response.wait();
+                                break;
+                            } catch (e) {
+                                if (e.code === ethers.utils.Logger.errors.TRANSACTION_REPLACED && !e.cancelled) {
+                                    response = e.replacement;
+                                    continue;
+                                }
+                                throw e;
+                            }
+                        }
+
+                        if (receipt.status) {
+                            action.innerText = `mint for ${price} eth`;
+                            action.href = '#';
+                        } else {
+                            action.innerText = "failed";
+                        }
                     }
                 };
+
+                const onClick = async function(evt) {
+                    try {
+                        await onClickInner(evt);
+                    } catch (e) {
+                        contract = null;
+                        provider = null;
+                        console.log(e);
+                        let msg = (""+e).substring(0, 50);
+                        alert("unhandled exception: " + msg);
+                        reload();
+                    }
+                };
+
 
                 action.addEventListener("click", onClick);
                 action.href = "#";
