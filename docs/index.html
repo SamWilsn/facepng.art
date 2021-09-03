@@ -690,6 +690,9 @@
                     }
                 ];
 
+                const eyes = ["0","^","o","x",">","<","\u0ca5"];
+                const noses = ["_",".","\u03c9"];
+
                 const roProvider = ethers.getDefaultProvider(network, {
                     infura: infuraId,
                     etherscan: etherscanId,
@@ -714,12 +717,19 @@
                 const reload = () => { location.reload(); };
 
                 const onMint = function(tokenId) {
+                    const smTokenId = tokenId.toNumber();
+                    const leftEye = (smTokenId >> 16) & 0xFF;
+                    const rightEye = smTokenId & 0xFF;
+                    const nose = (smTokenId >> 8) & 0xFF;
+                    const name = eyes[leftEye] + noses[nose] + eyes[rightEye];
+
                     const link = document.createElement("a");
                     const asset = contractAddress.toLowerCase();
                     link.href = `${openseaBase}${asset}/${tokenId}`;
                     link.rel = "noopener noreferrer";
                     link.target = "_blank";
-                    link.innerText = tokenId;
+                    link.innerText = name;
+                    link.title = tokenId;
                     minted.appendChild(link);
                 };
 
@@ -831,7 +841,7 @@
                             options
                         );
 
-                        options.gasLimit = gasEstimate.add(8000);
+                        options.gasLimit = gasEstimate.add(12000);
 
                         let response = await contract.mint(
                             currentAddress,
