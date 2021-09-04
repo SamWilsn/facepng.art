@@ -227,8 +227,13 @@
                 const alchemyId = "EM9440V_C6x0vNboHclwNinOfKiMqW8V";
                 const pocketId = "26f61f3140012b60ee8397f8d1b2c9b03e666580";
                 const openseaBase = "https://testnets.opensea.io/assets/";
+                const rerollGas = 8000;
+                const initialGas = ethers.BigNumber.from("130000000000000");
 
                 const contractAddress = "0x0e3884F492B235F022A455Ebad2079641136407e";
+
+                const rerollCurve = [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 10, 10, 11, 11, 11, 11, 11, 11, 12, 12, 12, 13, 13, 14, 15, 16, 16, 17, 19, 20, 21, 23, 25, 28, 30, 35, 42, 47, 55, 65, 80, 125, 150, 200, 300, 600];
+
                 const contractAbi = [
                     {
                         "inputs": [
@@ -831,7 +836,10 @@
                         action.removeAttribute("href");
                         inFlight = true;
 
-                        // TODO: Better gas.
+                        const x = currentPrice.div(initialGas).toNumber();
+                        const totalSupply = 2 + Math.ceil(Math.log(x) / Math.log(1.082));
+                        const extraGas = rerollCurve[totalSupply] * rerollGas;
+
                         let options = {
                             value: currentPrice
                         };
@@ -841,7 +849,7 @@
                             options
                         );
 
-                        options.gasLimit = gasEstimate.add(12000);
+                        options.gasLimit = gasEstimate.add(extraGas);
 
                         let response = await contract.mint(
                             currentAddress,
