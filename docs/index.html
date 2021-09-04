@@ -232,6 +232,16 @@
 
                 const contractAddress = "0x0e3884F492B235F022A455Ebad2079641136407e";
 
+                /*
+                    Gas estimation sucks. This curve tries to make sure that 90%
+                    of transactions will pass.
+
+                    As more faces are minted, it takes more and more rerolls to
+                    successfully create a unique face.
+
+                    There's probably a much nicer way to generate random numbers
+                    from a set, but I'm bored and just want to deploy this token
+                */
                 const rerollCurve = [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 10, 10, 11, 11, 11, 11, 11, 11, 12, 12, 12, 13, 13, 14, 15, 16, 16, 17, 19, 20, 21, 23, 25, 28, 30, 35, 42, 47, 55, 65, 80, 125, 150, 200, 300, 600];
 
                 const contractAbi = [
