@@ -763,7 +763,7 @@
                         };
 
                         const web3Modal = new Web3Modal({
-                            network: network,
+                            network: network === "homestead" ? "mainnet" : network,
                             cacheProvider: false,
                             providerOptions
                         });
