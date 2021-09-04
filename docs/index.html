@@ -810,6 +810,14 @@
                         contract = roContract.connect(provider);
 
                         let currentAddress = await provider.getAddress();
+
+                        let code = await web3Provider.getCode(currentAddress);
+                        if ("0x" !== code) {
+                            alert("Sorry, but smart contract wallets cannot mint.");
+                            reload();
+                            return;
+                        }
+
                         let filter = contract.filters.Transfer(null, currentAddress);
                         contract.on(filter, (from, to, tokenId) => onMint(tokenId));
 
